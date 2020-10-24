@@ -11,13 +11,21 @@ export REPO="faasd"
 
 version=""
 
-echo "Finding latest version from GitHub"
+info() {
+  echo '[INFO] ' "$@"
+}
+
+fatal() {
+  echo '[ERROR] ' "$@" >&2
+  exit 1
+}
+
+info "Finding latest version from GitHub"
 version=$(curl -sI https://github.com/$OWNER/$REPO/releases/latest | grep -i location | awk -F"/" '{ printf "%s", $NF }' | tr -d '\r')
-echo "$version"
+info "$version"
 
 if [ ! $version ]; then
-  echo "Failed while attempting to get latest version"
-  exit 1
+  fatal "Failed while attempting to get latest version"
 fi
 
 SUDO=sudo
@@ -48,11 +56,11 @@ install_required_packages() {
     $SUDO yum install -y curl runc
   else
     fatal "Could not find apt-get or yum. Cannot install dependencies on this OS."
-    exit 1
   fi
 }
 
 install_cni_plugins() {
+  info "Installing cni plugins"
   cni_version=v0.8.5
   suffix=""
   arch=$(uname -m)
@@ -76,6 +84,7 @@ install_cni_plugins() {
 }
 
 install_containerd() {
+  info "Installing containerd"
   arch=$(uname -m)
   case $arch in
   x86_64 | amd64)
@@ -101,6 +110,7 @@ install_containerd() {
 }
 
 install_faasd() {
+  info "Installing faasd"
   arch=$(uname -m)
   case $arch in
   x86_64 | amd64)
@@ -113,8 +123,7 @@ install_faasd() {
     suffix=-armhf
     ;;
   *)
-    echo "Unsupported architecture $arch"
-    exit 1
+    fatal "Unsupported architecture $arch"
     ;;
   esac
 
@@ -133,6 +142,45 @@ install_faasd() {
   sleep 5
 }
 
+install_caddy() {
+  info "Installing Caddy"
+  caddy_version=2.2.1
+  arch=$(uname -m)
+  case $arch in
+  x86_64 | amd64)
+    suffix=amd64
+    ;;
+  aarch64)
+    suffix=arm64
+    ;;
+  armv7l)
+    suffix=armv7
+    ;;
+  *)
+    fatal "Unsupported architecture $arch"
+    ;;
+  esac
+
+  curl -sSL "https://github.com/caddyserver/caddy/releases/download/v${caddy_version}/caddy_${caddy_version}_linux_${suffix}.tar.gz" | $SUDO tar -xvz -C /usr/local/bin/ caddy
+
+  $SUDO tee /etc/systemd/system/caddy.service >/dev/null <<EOF
+[Unit]
+Description=Caddy Reverse Proxy
+After=faasd.service
+[Service]
+ExecStart=/usr/local/bin/caddy reverse-proxy --from ${FAASD_DOMAIN} --to http://127.0.0.1:8080
+Type=simple
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  $SUDO systemctl enable caddy
+  $SUDO systemctl start caddy
+}
+
 verify_system
 install_required_packages
 
@@ -142,3 +190,7 @@ echo "net.ipv4.conf.all.forwarding=1" | $SUDO tee -a /etc/sysctl.conf
 install_cni_plugins
 install_containerd
 install_faasd
+
+if [ -n "${FAASD_DOMAIN}" ]; then
+  install_caddy
+fi
