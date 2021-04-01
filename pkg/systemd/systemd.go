@@ -64,16 +64,15 @@ func DaemonReload() error {
 	return nil
 }
 
-func InstallUnit(name string, tokens map[string]string) error {
+func InstallUnit(content []byte, name string, tokens map[string]string) error {
 	if len(tokens["Cwd"]) == 0 {
 		return fmt.Errorf("key Cwd expected in tokens parameter")
 	}
 
-	tmplName := "./hack/" + name + ".service"
-	tmpl, err := template.ParseFiles(tmplName)
+	tmpl, err := template.New(name).Parse(string(content))
 
 	if err != nil {
-		return fmt.Errorf("error loading template %s, error %s", tmplName, err)
+		return fmt.Errorf("error loading template %s, error %s", name, err)
 	}
 
 	var tpl bytes.Buffer

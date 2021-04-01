@@ -120,14 +120,6 @@ install_faasd() {
 
   $SUDO curl -fSLs "https://github.com/openfaas/faasd/releases/download/${version}/faasd${suffix}" --output "/usr/local/bin/faasd"
   $SUDO chmod a+x "/usr/local/bin/faasd"
-
-  mkdir -p /tmp/faasd-${version}-installation/hack
-  cd /tmp/faasd-${version}-installation
-  $SUDO curl -fSLs "https://raw.githubusercontent.com/openfaas/faasd/${version}/docker-compose.yaml" --output "docker-compose.yaml"
-  $SUDO curl -fSLs "https://raw.githubusercontent.com/openfaas/faasd/${version}/prometheus.yml" --output "prometheus.yml"
-  $SUDO curl -fSLs "https://raw.githubusercontent.com/openfaas/faasd/${version}/resolv.conf" --output "resolv.conf"
-  $SUDO curl -fSLs "https://raw.githubusercontent.com/openfaas/faasd/${version}/hack/faasd-provider.service" --output "hack/faasd-provider.service"
-  $SUDO curl -fSLs "https://raw.githubusercontent.com/openfaas/faasd/${version}/hack/faasd.service" --output "hack/faasd.service"
   $SUDO /usr/local/bin/faasd install
 }
 
@@ -178,7 +170,7 @@ EOF
     $SUDO systemctl enable caddy
     $SUDO systemctl start caddy
   else
-    echo "Skipping caddy installation as FAASD_DOMAIN."
+    echo "Skipping caddy installation as FAASD_DOMAIN is missing."
   fi
 }
 

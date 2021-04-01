@@ -1,6 +1,6 @@
 module github.com/openfaas/faasd
 
-go 1.15
+go 1.16
 
 require (
 	github.com/Microsoft/hcsshim v0.8.7-0.20190820203702-9e921883ac92 // indirect

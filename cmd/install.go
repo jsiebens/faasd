@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
 	"path"
 
+	"github.com/openfaas/faasd/pkg/assets"
 	systemd "github.com/openfaas/faasd/pkg/systemd"
 	"github.com/pkg/errors"
 
@@ -38,15 +40,15 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		return errors.Wrap(basicAuthErr, "cannot create basic-auth-* files")
 	}
 
-	if err := cp("docker-compose.yaml", faasdwd); err != nil {
+	if err := cp(assets.DockerCompose, path.Join(faasdwd, "docker-compose.yaml")); err != nil {
 		return err
 	}
 
-	if err := cp("prometheus.yml", faasdwd); err != nil {
+	if err := cp(assets.PrometheusConfig, path.Join(faasdwd, "prometheus.yml")); err != nil {
 		return err
 	}
 
-	if err := cp("resolv.conf", faasdwd); err != nil {
+	if err := cp(assets.ResolvConf, path.Join(faasdwd, "resolv.conf")); err != nil {
 		return err
 	}
 
@@ -55,7 +57,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	err = systemd.InstallUnit("faasd-provider", map[string]string{
+	err = systemd.InstallUnit(assets.FaasdProviderService, "faasd-provider", map[string]string{
 		"Cwd":             faasdProviderWd,
 		"SecretMountPath": path.Join(faasdwd, "secrets")})
 
@@ -63,7 +65,7 @@ func runInstall(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	err = systemd.InstallUnit("faasd", map[string]string{"Cwd": faasdwd})
+	err = systemd.InstallUnit(assets.FaasdService, "faasd", map[string]string{"Cwd": faasdwd})
 	if err != nil {
 		return err
 	}
@@ -121,21 +123,6 @@ func ensureWorkingDir(folder string) error {
 	return nil
 }
 
-func cp(source, destFolder string) error {
-	file, err := os.Open(source)
-	if err != nil {
-		return err
-
-	}
-	defer file.Close()
-
-	out, err := os.Create(path.Join(destFolder, source))
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, file)
-
-	return err
+func cp(content []byte, destination string) error {
+	return ioutil.WriteFile(destination, content, 0644)
 }

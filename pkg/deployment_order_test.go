@@ -125,7 +125,7 @@ func Test_buildDeploymentOrderCircularARequiresBRequiresA(t *testing.T) {
 
 func Test_buildDeploymentOrderComposeFile(t *testing.T) {
 	// svcs := []Service{}
-	file, err := LoadComposeFileWithArch("../", "docker-compose.yaml", func() (string, string) {
+	file, err := LoadComposeFileWithArch("./assets", "docker-compose.yaml", func() (string, string) {
 		return "x86_64", "Linux"
 	})
 
